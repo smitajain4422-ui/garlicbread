@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nosify Chat Engine</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    
+    <div class="animated-bg"></div>
+
+    <div id="mobile-blocker" class="fixed inset-0 bg-[#050505] z-[9999] flex-col items-center justify-center p-6 text-center">
+        <span class="text-5xl mb-4">🖥️</span>
+        <h1 class="text-xl font-bold text-white mb-2">PC Required</h1>
+        <p class="text-sm text-gray-400">Please switch to a computer or enable Desktop Mode in your browser to use the tool properly.</p>
+    </div>
+
+    <div id="gatekeeper-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+        <div class="bg-[var(--site-panel)] border border-[var(--site-border)] w-full max-w-md p-8 rounded-2xl shadow-2xl text-center relative overflow-hidden">
+            <h2 class="text-xl font-bold text-[var(--site-text)] mb-2">Nosify Hub</h2>
+            <p class="text-xs text-[var(--site-text-muted)] mb-6">Enter your access key to log in.</p>
+            <input type="password" id="access-gate-key" class="input-box text-center mb-4" placeholder="Enter Key...">
+            <button onclick="loginSystem()" class="w-full btn-blue py-3 font-bold" id="login-btn">Login</button>
+        </div>
+    </div>
+
+    <div id="admin-dashboard" class="hidden fixed inset-0 bg-[var(--site-bg)] z-[900] overflow-y-auto p-4 md:p-10 text-[var(--site-text)]">
+        <div class="max-w-6xl mx-auto space-y-6">
+            <div class="flex justify-between items-center bg-[var(--site-panel)] p-6 rounded-xl border border-[var(--site-border)]">
+                <div>
+                    <h1 class="text-2xl font-bold text-[#5865F2]">Admin Panel</h1>
+                    <p class="text-sm text-[var(--site-text-muted)]">Manage keys, monitor usage, and ban devices.</p>
+                </div>
+                <button onclick="logoutSystem()" class="btn-dark">Logout</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-[var(--site-panel)] border border-[var(--site-border)] p-6 rounded-xl space-y-4 h-fit">
+                    <h2 class="text-sm font-bold">Create Key</h2>
+                    
+                    <div>
+                        <label class="text-xs text-[var(--site-text-muted)] block mb-1">Custom Name (Optional)</label>
+                        <input type="text" id="adm-custom-name" class="input-box" placeholder="e.g. SPENCER-VIP">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-[var(--site-text-muted)] block mb-1">Expiration</label>
+                        <select id="adm-key-time" class="input-box">
+                            <option value="5h">5 Hours</option>
+                            <option value="1d">1 Day</option>
+                            <option value="3d">3 Days</option>
+                            <option value="perm">Permanent</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-[var(--site-text-muted)] block mb-1">Uses Allowed</label>
+                        <select id="adm-key-uses" class="input-box">
+                            <option value="10">10 Chats</option>
+                            <option value="50">50 Chats</option>
+                            <option value="perm">Unlimited</option>
+                        </select>
+                    </div>
+
+                    <button onclick="createKey()" class="w-full btn-blue py-3">Generate</button>
+                </div>
+
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-[var(--site-panel)] border border-[var(--site-border)] p-6 rounded-xl">
+                        <h2 class="text-sm font-bold mb-4">Active Keys Database</h2>
+                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+                            <table class="w-full text-left font-mono text-xs">
+                                <thead>
+                                    <tr class="border-b border-[var(--site-border)] text-[var(--site-text-muted)]"><th class="pb-2">Key</th><th class="pb-2">Time</th><th class="pb-2">Chats</th><th class="pb-2">Claimed By (Device ID)</th><th class="pb-2 text-right">Actions</th></tr>
+                                </thead>
+                                <tbody id="adm-keys-list" class="divide-y divide-[var(--site-border)]"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-[var(--site-panel)] border border-[var(--site-border)] p-6 rounded-xl">
+                        <h2 class="text-sm font-bold mb-4 text-orange-400">Security & Recent Logins</h2>
+                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+                            <table class="w-full text-left font-mono text-xs">
+                                <thead>
+                                    <tr class="border-b border-[var(--site-border)] text-[var(--site-text-muted)]"><th class="pb-2">Time</th><th class="pb-2">Key Used</th><th class="pb-2">Device ID</th><th class="pb-2 text-right">Security Action</th></tr>
+                                </thead>
+                                <tbody id="adm-logs-list" class="divide-y divide-[var(--site-border)]"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel hidden" id="app-workspace">
+        
+        <div class="bottom-nav">
+            <div class="nav-item active" id="nav-dash" onclick="switchTab('tab-dashboard')"><span class="nav-icon">📊</span><span>Dash</span></div>
+            <div class="nav-item" id="nav-prof" onclick="switchTab('tab-profile')"><span class="nav-icon">👤</span><span>Profile</span></div>
+            <div class="nav-item" id="nav-tutor" onclick="switchTab('tab-tutorial')"><span class="nav-icon">📖</span><span>Guide</span></div>
+            <div class="nav-item" id="nav-recents" onclick="switchTab('tab-recents')"><span class="nav-icon">⏳</span><span>Logs</span></div>
+        </div>
+
+        <div class="content-area p-6">
+            
+            <div id="tab-dashboard" class="tab-content active" style="padding:0;">
+                <div class="max-w-[1100px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="bg-[var(--site-panel)] border border-[var(--site-border)] p-4 rounded-xl">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-sm font-bold">Chat Setup</h3>
+                                <span class="text-[10px] text-[var(--site-text-muted)] font-mono border border-[var(--site-border)] px-2 py-1 rounded" id="chats-left-display">Left: 0</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                <button onclick="setSender(1)" id="btn-u1" class="p-2 text-xs font-bold rounded-lg border border-[#5865F2] bg-[#5865F2]/10 text-[#5865F2] transition">User 1</button>
+                                <button onclick="setSender(2)" id="btn-u2" class="p-2 text-xs font-bold rounded-lg border border-[var(--site-border)] text-[var(--site-text-muted)] transition">User 2</button>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <textarea id="msg-text" class="input-box text-sm h-20" placeholder="Type here... Use **bold**, ||spoiler||, @Username"></textarea>
+                                <input type="text" id="msg-img" class="input-box text-xs" placeholder="Image URL (Optional)">
+                            </div>
+                        </div>
+
+                        <div class="bg-[var(--site-panel)] border border-[var(--site-border)] p-4 rounded-xl space-y-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-[var(--site-text-muted)] block mb-1">Time</label>
+                                    <input type="time" id="msg-time" class="input-box text-xs py-1">
+                                </div>
+                                <div class="flex items-center pt-4 pl-2">
+                                    <label class="text-xs flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="msg-edited" class="rounded"> (edited)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <div class="w-1/2">
+                                    <label class="text-[10px] uppercase font-bold text-[var(--site-text-muted)] block mb-1">Reply to ID (e.g. 0)</label>
+                                    <input type="number" id="msg-reply" class="input-box text-xs py-1">
+                                </div>
+                                <div class="w-1/2">
+                                    <label class="text-[10px] uppercase font-bold text-[var(--site-text-muted)] block mb-1">Add Reaction</label>
+                                    <input type="text" id="msg-react" class="input-box text-xs py-1" placeholder="🔥 or 👍">
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <label class="text-[10px] uppercase font-bold text-[var(--site-text-muted)] block mb-1">Chat Background</label>
+                                <div class="flex gap-2 items-center">
+                                    <input type="color" id="chat-bg-color" class="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent" value="#313338" onchange="changeBgColor()">
+                                    <button onclick="surpriseGradient()" class="btn-dark py-1 px-3 text-xs flex-1 border-indigo-500/40 text-indigo-400">✨ Magic Gradient</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 pt-2">
+                                <button onclick="addMessage()" class="btn-blue text-xs py-2">+ Add Message</button>
+                                <button onclick="addNewMsgLine()" class="btn-dark text-xs py-2 text-red-500">🚨 New Msg Line</button>
+                                <button onclick="addDateLine()" class="btn-dark text-xs py-2">📅 Date Line</button>
+                                <button onclick="openClearMenu()" class="btn-dark text-xs py-2 text-orange-500">🗑️ Clear Chat</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 flex flex-col justify-between h-full">
+                        <div class="bg-[var(--site-panel)] p-2 border border-[var(--site-border)] rounded-xl h-full flex flex-col">
+                            <div class="flex justify-between items-center mb-2 px-2">
+                                <span class="text-xs font-bold text-[var(--site-text-muted)] uppercase">Screenshot Area</span>
+                                <div class="flex gap-2">
+                                    <button onclick="toggleChatTextColor()" class="text-[10px] border border-[var(--site-border)] px-2 py-1 rounded hover:bg-[var(--site-border)]">Toggle Text Dark/Light</button>
+                                    <button onclick="toggleFullScreen()" class="text-[10px] border border-[var(--site-border)] px-2 py-1 rounded hover:bg-[var(--site-border)] text-[#5865F2] font-bold">⛶ Fullscreen</button>
+                                </div>
+                            </div>
+                            
+                            <div id="capture-zone" class="mockup-wrapper flex-1">
+                                <button onclick="toggleFullScreen()" class="close-fs-btn btn-red shadow-lg">Close Fullscreen</button>
+                                
+                                <div id="chat-history"></div>
+                                
+                                <div class="input-bar">
+                                    <div class="plus-btn">
+                                        <svg viewBox="0 0 24 24" width="20" height="20" style="width: 20px; height: 20px;"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"></path></svg>
+                                    </div>
+                                    <input type="text" class="message-input" id="fake-placeholder" placeholder="Message @User 2" disabled>
+                                    <div class="action-icons">
+                                        <svg viewBox="0 0 24 24"><path d="M21 8h-3.24a4.5 4.5 0 0 0-6.76-4.22A4.5 4.5 0 0 0 4.24 8H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1Zm-9-1.5a1.5 1.5 0 1 1 1.5 1.5H12V6.5Zm-4.5 1.5a1.5 1.5 0 1 1 1.5-1.5V8H7.5Zm-4.5 6H10v8H4a1 1 0 0 1-1-1v-7Zm10 8v-8h7v7a1 1 0 0 1-1 1h-6Z"></path></svg>
+                                        <div class="gif-btn">GIF</div>
+                                        <svg viewBox="0 0 24 24"><path d="M20 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2ZM8.5 13a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM12 17c-2.33 0-4.33-1.33-5.33-3.33h10.66C16.33 15.67 14.33 17 12 17Z"></path></svg>
+                                        <svg viewBox="0 0 24 24"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm-3.5-13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm7 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM12 17.5c-2.67 0-5-1.83-6-4.5h12c-1 2.67-3.33 4.5-6 4.5Z"></path></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="watermark">NOSIFY CHAT ENGINE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-profile" class="tab-content" style="padding:0;">
+                <div class="max-w-2xl mx-auto bg-[var(--site-panel)] border border-[var(--site-border)] rounded-xl p-6 space-y-6">
+                    <div class="border-b border-[var(--site-border)] pb-4 flex justify-between items-center">
+                        <h2 class="text-lg font-bold">Profile Config</h2>
+                        <button onclick="logoutSystem()" class="btn-dark text-red-500 border-red-500/50 py-1 px-3 text-xs">Log Out</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="border border-[var(--site-border)] p-4 rounded-xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-[#5865F2]">User 1</span>
+                                <button onclick="randomizeUser(1)" class="text-[11px] text-[var(--site-text-muted)] hover:text-[var(--site-text)]">🎲 Random</button>
+                            </div>
+                            <input type="text" id="u1-name" class="input-box text-sm" value="Spencer">
+                            <input type="text" id="u1-pfp" class="input-box text-sm" value="https://cdn.discordapp.com/avatars/1501622757593714911/be3f8e45edb1d086e5503dd5c46814aa.webp?size=2048">
+                            <div class="flex gap-4 pt-1 items-center">
+                                <label class="text-xs flex items-center gap-2"><input type="checkbox" id="u1-bot" class="rounded"> BOT Badge</label>
+                                <input type="color" id="u1-color" class="w-6 h-6 p-0 border-0 bg-transparent cursor-pointer" value="#f2f3f5">
+                            </div>
+                        </div>
+
+                        <div class="border border-[var(--site-border)] p-4 rounded-xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-[#5865F2]">User 2</span>
+                                <button onclick="randomizeUser(2)" class="text-[11px] text-[var(--site-text-muted)] hover:text-[var(--site-text)]">🎲 Random</button>
+                            </div>
+                            <input type="text" id="u2-name" class="input-box text-sm" value="User 2">
+                            <input type="text" id="u2-pfp" class="input-box text-sm" value="https://i.imgflip.com/4/385o34.png">
+                            <div class="flex gap-4 pt-1 items-center">
+                                <label class="text-xs flex items-center gap-2"><input type="checkbox" id="u2-bot" class="rounded"> BOT Badge</label>
+                                <input type="color" id="u2-color" class="w-6 h-6 p-0 border-0 bg-transparent cursor-pointer" value="#f2f3f5">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-[var(--site-border)] pt-4">
+                        <button onclick="toggleSiteTheme()" class="btn-dark text-xs py-2 w-full mb-3">Toggle Site Dark/Light Theme</button>
+                        <button onclick="saveProfiles()" class="w-full btn-blue py-3">Save Profiles & Update</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-tutorial" class="tab-content" style="padding:0;">
+                <div class="max-w-2xl mx-auto bg-[var(--site-panel)] border border-[var(--site-border)] rounded-xl p-6">
+                    <h2 class="text-lg font-bold mb-4">How to format</h2>
+                    <ul class="text-sm space-y-2 text-[var(--site-text-muted)]">
+                        <li><strong>Bold:</strong> `**text**`</li>
+                        <li><strong>Underline:</strong> `__text__`</li>
+                        <li><strong>Spoiler:</strong> `||text||`</li>
+                        <li><strong>Mention:</strong> `@Name`</li>
+                        <li><strong>Reply:</strong> Enter the ID of the message (0 is the first message you added, 1 is the second).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="tab-recents" class="tab-content" style="padding:0;">
+                <div class="max-w-2xl mx-auto bg-[var(--site-panel)] border border-[var(--site-border)] rounded-xl p-6">
+                    <h2 class="text-lg font-bold mb-4">Chat Recovery Logs</h2>
+                    <div id="recovery-list" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="clear-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[2000] flex items-center justify-center hidden">
+        <div class="bg-[var(--site-panel)] border border-[var(--site-border)] p-6 rounded-xl space-y-4 w-64 text-center">
+            <h3 class="font-bold text-white">Clear Chat</h3>
+            <button onclick="clearWholeChat()" class="w-full btn-blue bg-red-600">Clear All</button>
+            <input type="number" id="clear-index" class="input-box text-center" placeholder="ID to delete">
+            <button onclick="clearSingleMessage()" class="w-full btn-dark border-orange-500 text-orange-500">Delete Row</button>
+            <button onclick="closeClearMenu()" class="w-full btn-dark mt-2">Cancel</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
