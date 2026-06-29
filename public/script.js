@@ -55,11 +55,10 @@ window.onload = () => {
         if (activeKey === "SECURE_ADMIN_TOKEN") {
             showAdminPanel();
         } else {
-            // --- NEW EXPIRATION CHECK ---
             let exp = localStorage.getItem('nosify_expires');
             if (exp && exp !== 'null' && new Date().getTime() > parseInt(exp)) {
                 alert("Your access key has expired.");
-                return logoutSystem(); // Kicks them out
+                return logoutSystem(); 
             }
             showApp(); 
         }
@@ -378,23 +377,32 @@ function randomizeUser(id) {
     saveProfiles();
 }
 
-// --- NEW DOWNLOAD FEATURE ---
+// --- NEW DOWNLOAD FEATURE (FIXED FOR PERFECT ALIGNMENT) ---
 function downloadProof() {
     const captureZone = document.getElementById('capture-zone');
     
+    // Hide the close button before capture
     const closeBtn = document.querySelector('.close-fs-btn');
     if (closeBtn) closeBtn.style.display = 'none';
 
-    html2canvas(captureZone, {
-        backgroundColor: null, 
-        useCORS: true 
-    }).then(canvas => {
+    // Uses htmlToImage for flawless flexbox rendering
+    htmlToImage.toPng(captureZone, { 
+        quality: 1.0, 
+        pixelRatio: 2 // Boosts the resolution for a crisp screenshot
+    })
+    .then(function (dataUrl) {
+        // Restore the close button
         if (closeBtn) closeBtn.style.display = '';
         
         const link = document.createElement('a');
         link.download = `nosify-chat-${new Date().getTime()}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = dataUrl;
         link.click();
+    })
+    .catch(function (error) {
+        if (closeBtn) closeBtn.style.display = '';
+        console.error('Oops, something went wrong!', error);
+        alert("Failed to render the image. Please try again.");
     });
 }
-    
+
