@@ -1,50 +1,40 @@
 // --- ANTI-THEFT SCRIPTS ---
 document.addEventListener('contextmenu', event => event.preventDefault()); 
 document.addEventListener('keydown', function(event) {
-    if (event.keyCode === 123 || 
-       (event.ctrlKey && event.shiftKey && event.keyCode === 73) || 
-       (event.ctrlKey && event.keyCode === 85)) {
-        event.preventDefault();
-        return false;
+    if (event.keyCode === 123 || (event.ctrlKey && event.shiftKey && event.keyCode === 73) || (event.ctrlKey && event.keyCode === 85)) {
+        event.preventDefault(); return false;
     }
 });
 
 // --- DEVICE DETECTION ---
 function checkDeviceAccess() {
-    // "Request Desktop Site" spoofs a desktop OS, removing 'Mobile', 'Android', 'iPhone'.
     const ua = navigator.userAgent;
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(ua);
-    
     if (isMobileDevice) {
         document.getElementById('mobile-blocker').style.display = 'flex';
         document.getElementById('gatekeeper-modal').style.display = 'none';
         document.getElementById('app-workspace').classList.add('hidden');
         document.getElementById('admin-dashboard').classList.add('hidden');
-        return false; // Stop loading app
+        return false;
     } else {
         document.getElementById('mobile-blocker').style.display = 'none';
-        return true; // Proceed normally
+        return true;
     }
 }
 
+// Ensure the user has a permanent Device ID for locking
 let deviceId = localStorage.getItem('nosify_device');
 if (!deviceId) {
     deviceId = 'DEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     localStorage.setItem('nosify_device', deviceId);
 }
 
-let keysDB = JSON.parse(localStorage.getItem('nosify_keys')) || [
-    { key: "FREE", time: "perm", max: "perm", left: "perm", expires: null, claimedBy: null }
-];
-
-let loginLogsDB = JSON.parse(localStorage.getItem('nosify_logs')) || [];
-let bannedDevices = JSON.parse(localStorage.getItem('nosify_bans')) || [];
-
 let chatHistoryState = []; 
 let chatArray = [];
 let lastSenderId = null;
 let activeSender = 1;
 let activeKey = sessionStorage.getItem('nosify_session') || null;
+let adminPass = sessionStorage.getItem('nosify_admin_pass') || null;
 
 let users = {
     1: { name: "Spencer", color: "#f2f3f5", pfp: "https://cdn.discordapp.com/avatars/1501622757593714911/be3f8e45edb1d086e5503dd5c46814aa.webp?size=2048", bot: false },
@@ -59,20 +49,11 @@ const GRADIENTS = [
 ];
 
 window.onload = () => {
-    // RUN DEVICE CHECK FIRST
     if (!checkDeviceAccess()) return; 
 
     if (activeKey) {
         if (activeKey === "SECURE_ADMIN_TOKEN") showAdminPanel();
-        else {
-            if (bannedDevices.includes(deviceId)) {
-                alert("Your device has been banned by the Administrator.");
-                return logoutSystem();
-            }
-            let k = keysDB.find(x => x.key === activeKey);
-            if (k) showApp();
-            else logoutSystem(); 
-        }
+        else showApp(); 
     }
     const now = new Date();
     document.getElementById("msg-time").value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -90,45 +71,27 @@ async function loginSystem() {
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: val })
+            body: JSON.stringify({ key: val, deviceId: deviceId })
         });
         const data = await response.json();
         
-        if (data.success && data.role === 'admin') {
-            sessionStorage.setItem('nosify_session', 'SECURE_ADMIN_TOKEN');
+        if (data.success) {
+            if (data.role === 'admin') {
+                sessionStorage.setItem('nosify_session', 'SECURE_ADMIN_TOKEN');
+                sessionStorage.setItem('nosify_admin_pass', val); 
+            } else {
+                sessionStorage.setItem('nosify_session', val);
+                sessionStorage.setItem('nosify_limits', data.left);
+                sessionStorage.setItem('nosify_max', data.max);
+            }
             return window.location.reload();
+        } else {
+            alert(data.error);
+            btn.innerText = "Login";
         }
     } catch (err) {
-        console.log("Backend check skipped or unavailable - proceeding to local validation.");
-    }
-    
-    btn.innerText = "Login";
-
-    if (bannedDevices.includes(deviceId)) {
-        return alert("Your device is banned.");
-    }
-
-    let found = keysDB.find(x => x.key === val);
-    if (found) {
-        if (found.expires && new Date().getTime() > found.expires) return alert("Key expired.");
-        if (found.left !== "perm" && found.left <= 0) return alert("No chats left on this key.");
-        
-        if (found.claimedBy && found.claimedBy !== deviceId) {
-            return alert("This key is already being used by another person.");
-        }
-        if (!found.claimedBy && found.key !== "FREE") {
-            found.claimedBy = deviceId;
-            localStorage.setItem('nosify_keys', JSON.stringify(keysDB));
-        }
-
-        loginLogsDB.unshift({ time: new Date().toLocaleString(), key: val, device: deviceId });
-        if(loginLogsDB.length > 50) loginLogsDB.pop(); 
-        localStorage.setItem('nosify_logs', JSON.stringify(loginLogsDB));
-
-        sessionStorage.setItem('nosify_session', val);
-        window.location.reload();
-    } else {
-        alert("Invalid key.");
+        alert("Server error connecting to database.");
+        btn.innerText = "Login";
     }
 }
 
@@ -145,23 +108,30 @@ function showApp() {
 }
 
 function logoutSystem() {
-    sessionStorage.removeItem('nosify_session');
+    sessionStorage.clear();
     window.location.reload();
 }
 
 function updateLimits() {
     let session = sessionStorage.getItem('nosify_session');
-    let el = document.getElementById("chats-left-display");
-    let match = keysDB.find(t => t.key === session);
-    if (match) el.innerText = `Left: ${match.left}/${match.max}`;
+    if (session === "SECURE_ADMIN_TOKEN") return;
+    let limits = sessionStorage.getItem('nosify_limits');
+    let max = sessionStorage.getItem('nosify_max');
+    if (limits) document.getElementById("chats-left-display").innerText = `Left: ${limits}/${max}`;
 }
 
-function createKey() {
+async function adminAction(action, payload) {
+    await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminPass },
+        body: JSON.stringify({ action, payload })
+    });
+    loadAdminData();
+}
+
+async function createKey() {
     let customName = $("#adm-custom-name").val().trim();
     let k = customName ? customName : "KEY-" + Math.random().toString(36).substr(2, 6).toUpperCase();
-    
-    if (keysDB.find(x => x.key === k)) return alert("Key name already exists!");
-
     let time = $("#adm-key-time").val();
     let max = $("#adm-key-uses").val();
     let exp = null;
@@ -171,40 +141,24 @@ function createKey() {
         if (time === "1d") exp = ms + (24*3600000);
         if (time === "3d") exp = ms + (72*3600000);
     }
-    keysDB.push({ key: k, time: time, max: max, left: max === "perm" ? "perm" : parseInt(max), expires: exp, claimedBy: null });
-    localStorage.setItem('nosify_keys', JSON.stringify(keysDB)); 
-    loadAdminData();
+    
+    let payload = { key: k, time: time, max: max, left: max === "perm" ? "perm" : parseInt(max), expires: exp, claimedBy: null };
+    await adminAction('create_key', payload);
     $("#adm-custom-name").val("");
 }
 
-function deleteKey(idx) { keysDB.splice(idx, 1); localStorage.setItem('nosify_keys', JSON.stringify(keysDB)); loadAdminData(); }
+function deleteKey(idx) { adminAction('delete_key', idx); }
 function copyKey(keyText) { navigator.clipboard.writeText(keyText); alert("Copied!"); }
+function banDevice(devId) { if(devId && devId !== 'null' && devId !== 'Open') { adminAction('ban_device', devId); alert("Banned!"); } }
+function revokeLogKey(keyString) { adminAction('revoke_key', keyString); }
 
-function banDevice(devId) {
-    if(!devId || devId === 'null' || devId === 'Open') return alert("No device to ban.");
-    if(!bannedDevices.includes(devId)) {
-        bannedDevices.push(devId);
-        localStorage.setItem('nosify_bans', JSON.stringify(bannedDevices));
-        alert(`Device ${devId} has been permanently banned.`);
-        loadAdminData();
-    }
-}
+async function loadAdminData() {
+    const res = await fetch('/api/admin', { headers: { 'Authorization': adminPass }});
+    if (!res.ok) return logoutSystem();
+    const db = await res.json();
 
-function revokeLogKey(keyString) {
-    let idx = keysDB.findIndex(k => k.key === keyString);
-    if (idx !== -1) {
-        keysDB.splice(idx, 1);
-        localStorage.setItem('nosify_keys', JSON.stringify(keysDB));
-        alert(`Key ${keyString} revoked.`);
-        loadAdminData();
-    } else {
-        alert("Key already revoked or doesn't exist.");
-    }
-}
-
-function loadAdminData() {
     let html = "";
-    keysDB.forEach((k, i) => {
+    db.keys.forEach((k, i) => {
         html += `<tr>
             <td class="py-3 text-[#5865F2] font-bold">${k.key}</td>
             <td class="py-3">${k.time}</td>
@@ -219,15 +173,15 @@ function loadAdminData() {
     $("#adm-keys-list").html(html);
 
     let logsHtml = "";
-    loginLogsDB.forEach((log) => {
-        let isBanned = bannedDevices.includes(log.device);
+    db.logs.forEach((log) => {
+        let isBanned = db.bans.includes(log.device);
         logsHtml += `<tr>
             <td class="py-3 text-gray-400 text-[10px]">${log.time}</td>
             <td class="py-3 text-[#5865F2] font-bold">${log.key}</td>
             <td class="py-3 text-[10px] font-mono ${isBanned ? 'text-red-500 line-through' : 'text-white'}">${log.device}</td>
             <td class="py-3 text-right">
-                <button onclick="revokeLogKey('${log.key}')" class="text-white bg-gray-800 px-2 py-1 rounded text-[10px] mr-1 hover:bg-gray-700">Revoke Key</button>
-                <button onclick="banDevice('${log.device}')" class="btn-red ${isBanned ? 'opacity-50 cursor-not-allowed' : ''}" ${isBanned ? 'disabled' : ''}>${isBanned ? 'Banned' : 'Ban Device'}</button>
+                <button onclick="revokeLogKey('${log.key}')" class="text-white bg-gray-800 px-2 py-1 rounded text-[10px] mr-1 hover:bg-gray-700">Revoke</button>
+                <button onclick="banDevice('${log.device}')" class="btn-red ${isBanned ? 'opacity-50 cursor-not-allowed' : ''}" ${isBanned ? 'disabled' : ''}>${isBanned ? 'Banned' : 'Ban'}</button>
             </td>
         </tr>`;
     });
@@ -279,24 +233,26 @@ function setSender(idx) {
 }
 
 function addMessage() {
-    if (activeKey !== "SECURE_ADMIN_TOKEN" && bannedDevices.includes(deviceId)) {
-        alert("You have been banned.");
-        return logoutSystem();
-    }
-
-    let session = sessionStorage.getItem('nosify_session');
-    if(session !== "SECURE_ADMIN_TOKEN") {
-        let match = keysDB.find(t => t.key === session);
-        if (!match) return logoutSystem(); 
-        if (match && match.left !== "perm") {
-            if (match.left <= 0) { alert("No chats left."); return logoutSystem(); }
-            match.left--; localStorage.setItem('nosify_keys', JSON.stringify(keysDB)); updateLimits();
-        }
-    }
-
     let txt = $("#msg-text").val();
     let img = $("#msg-img").val().trim();
     if(!txt.trim() && !img) return;
+
+    if (activeKey !== "SECURE_ADMIN_TOKEN") {
+        let limits = sessionStorage.getItem('nosify_limits');
+        if (limits !== "perm") {
+            let left = parseInt(limits);
+            if (left <= 0) { alert("No chats left."); return logoutSystem(); }
+            
+            // Deduct local and cloud
+            sessionStorage.setItem('nosify_limits', left - 1);
+            updateLimits();
+            fetch('/api/admin', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'deduct_use', payload: activeKey })
+            });
+        }
+    }
 
     chatArray.push({
         type: "msg", uId: activeSender, uName: users[activeSender].name, uColor: users[activeSender].color,
@@ -404,5 +360,5 @@ function randomizeUser(id) {
     $("#u"+id+"-name").val(names[Math.floor(Math.random()*names.length)] + Math.floor(Math.random()*99));
     $("#u"+id+"-pfp").val(pfps[Math.floor(Math.random()*pfps.length)]);
     saveProfiles();
-      }
-  
+        }
+                
