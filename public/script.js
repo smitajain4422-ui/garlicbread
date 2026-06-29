@@ -33,8 +33,8 @@ let chatHistoryState = [];
 let chatArray = [];
 let lastSenderId = null;
 let activeSender = 1;
-let activeKey = sessionStorage.getItem('nosify_session') || null;
-let adminPass = sessionStorage.getItem('nosify_admin_pass') || null;
+let activeKey = localStorage.getItem('nosify_session') || null;
+let adminPass = localStorage.getItem('nosify_admin_pass') || null;
 
 let users = {
     1: { name: "Spencer", color: "#f2f3f5", pfp: "https://cdn.discordapp.com/avatars/1501622757593714911/be3f8e45edb1d086e5503dd5c46814aa.webp?size=2048", bot: false },
@@ -52,8 +52,17 @@ window.onload = () => {
     if (!checkDeviceAccess()) return; 
 
     if (activeKey) {
-        if (activeKey === "SECURE_ADMIN_TOKEN") showAdminPanel();
-        else showApp(); 
+        if (activeKey === "SECURE_ADMIN_TOKEN") {
+            showAdminPanel();
+        } else {
+            // --- NEW EXPIRATION CHECK ---
+            let exp = localStorage.getItem('nosify_expires');
+            if (exp && exp !== 'null' && new Date().getTime() > parseInt(exp)) {
+                alert("Your access key has expired.");
+                return logoutSystem(); // Kicks them out
+            }
+            showApp(); 
+        }
     }
     const now = new Date();
     document.getElementById("msg-time").value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -77,12 +86,13 @@ async function loginSystem() {
         
         if (data.success) {
             if (data.role === 'admin') {
-                sessionStorage.setItem('nosify_session', 'SECURE_ADMIN_TOKEN');
-                sessionStorage.setItem('nosify_admin_pass', val); 
+                localStorage.setItem('nosify_session', 'SECURE_ADMIN_TOKEN');
+                localStorage.setItem('nosify_admin_pass', val); 
             } else {
-                sessionStorage.setItem('nosify_session', val);
-                sessionStorage.setItem('nosify_limits', data.left);
-                sessionStorage.setItem('nosify_max', data.max);
+                localStorage.setItem('nosify_session', val);
+                localStorage.setItem('nosify_limits', data.left);
+                localStorage.setItem('nosify_max', data.max);
+                localStorage.setItem('nosify_expires', data.expires);
             }
             return window.location.reload();
         } else {
@@ -108,15 +118,19 @@ function showApp() {
 }
 
 function logoutSystem() {
-    sessionStorage.clear();
+    localStorage.removeItem('nosify_session');
+    localStorage.removeItem('nosify_admin_pass');
+    localStorage.removeItem('nosify_limits');
+    localStorage.removeItem('nosify_max');
+    localStorage.removeItem('nosify_expires');
     window.location.reload();
 }
 
 function updateLimits() {
-    let session = sessionStorage.getItem('nosify_session');
+    let session = localStorage.getItem('nosify_session');
     if (session === "SECURE_ADMIN_TOKEN") return;
-    let limits = sessionStorage.getItem('nosify_limits');
-    let max = sessionStorage.getItem('nosify_max');
+    let limits = localStorage.getItem('nosify_limits');
+    let max = localStorage.getItem('nosify_max');
     if (limits) document.getElementById("chats-left-display").innerText = `Left: ${limits}/${max}`;
 }
 
@@ -198,7 +212,10 @@ function switchTab(id) {
 }
 
 function toggleSiteTheme() { document.body.classList.toggle("light-site"); }
-function toggleChatTextColor() { document.getElementById("capture-zone").classList.toggle("light-chat-text"); }
+function toggleChatTextColor() { 
+    document.getElementById("capture-zone").classList.toggle("light-chat-text"); 
+    document.getElementById("capture-zone").style.background = "";
+}
 function toggleFullScreen() { document.getElementById("capture-zone").classList.toggle("fullscreen-active"); }
 
 function hexToRgb(hex) {
@@ -238,13 +255,12 @@ function addMessage() {
     if(!txt.trim() && !img) return;
 
     if (activeKey !== "SECURE_ADMIN_TOKEN") {
-        let limits = sessionStorage.getItem('nosify_limits');
+        let limits = localStorage.getItem('nosify_limits');
         if (limits !== "perm") {
             let left = parseInt(limits);
             if (left <= 0) { alert("No chats left."); return logoutSystem(); }
             
-            // Deduct local and cloud
-            sessionStorage.setItem('nosify_limits', left - 1);
+            localStorage.setItem('nosify_limits', left - 1);
             updateLimits();
             fetch('/api/admin', { 
                 method: 'POST', 
@@ -360,5 +376,25 @@ function randomizeUser(id) {
     $("#u"+id+"-name").val(names[Math.floor(Math.random()*names.length)] + Math.floor(Math.random()*99));
     $("#u"+id+"-pfp").val(pfps[Math.floor(Math.random()*pfps.length)]);
     saveProfiles();
-        }
-                
+}
+
+// --- NEW DOWNLOAD FEATURE ---
+function downloadProof() {
+    const captureZone = document.getElementById('capture-zone');
+    
+    const closeBtn = document.querySelector('.close-fs-btn');
+    if (closeBtn) closeBtn.style.display = 'none';
+
+    html2canvas(captureZone, {
+        backgroundColor: null, 
+        useCORS: true 
+    }).then(canvas => {
+        if (closeBtn) closeBtn.style.display = '';
+        
+        const link = document.createElement('a');
+        link.download = `nosify-chat-${new Date().getTime()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
+    
