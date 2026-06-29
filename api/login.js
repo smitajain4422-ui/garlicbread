@@ -6,6 +6,7 @@ export default async function handler(req, res) {
 
     if (key === ADMIN_PASS) return res.status(200).json({ success: true, role: "admin" });
 
+    // Using the exact Vercel Upstash prefixed variables from your setup
     const KV_URL = process.env.nosify_db_KV_REST_API_URL;
     const KV_TOKEN = process.env.nosify_db_KV_REST_API_TOKEN;
 
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
         body: JSON.stringify(db)
     });
 
-    return res.status(200).json({ success: true, role: "user", left: keyObj.left, max: keyObj.max });
-}
-    
+    // Sends the exact expiration time back to the browser
+    return res.status(200).json({ success: true, role: "user", left: keyObj.left, max: keyObj.max, expires: keyObj.expires });
+                                              }
+        
