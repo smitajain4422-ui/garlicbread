@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -178,6 +180,8 @@
                             <div class="flex justify-between items-center mb-2 px-2">
                                 <span class="text-xs font-bold text-[var(--site-text-muted)] uppercase">Screenshot Area</span>
                                 <div class="flex gap-2">
+                                    <button onclick="downloadProof()" class="text-[10px] bg-[#5865F2] text-white px-2 py-1 rounded hover:bg-[#4752C4] font-bold">⬇️ Download</button>
+                                    
                                     <button onclick="toggleChatTextColor()" class="text-[10px] border border-[var(--site-border)] px-2 py-1 rounded hover:bg-[var(--site-border)]">Toggle Text Dark/Light</button>
                                     <button onclick="toggleFullScreen()" class="text-[10px] border border-[var(--site-border)] px-2 py-1 rounded hover:bg-[var(--site-border)] text-[#5865F2] font-bold">⛶ Fullscreen</button>
                                 </div>
@@ -220,7 +224,7 @@
                                 <span class="text-sm font-bold text-[#5865F2]">User 1</span>
                                 <button onclick="randomizeUser(1)" class="text-[11px] text-[var(--site-text-muted)] hover:text-[var(--site-text)]">🎲 Random</button>
                             </div>
-                            <input type="text" id="u1-name" class="input-box text-sm" value="Spencer">
+                            <input type="text" id="u1-name" class="input-box text-sm" value="Nosify">
                             <input type="text" id="u1-pfp" class="input-box text-sm" value="https://cdn.discordapp.com/avatars/1501622757593714911/be3f8e45edb1d086e5503dd5c46814aa.webp?size=2048">
                             <div class="flex gap-4 pt-1 items-center">
                                 <label class="text-xs flex items-center gap-2"><input type="checkbox" id="u1-bot" class="rounded"> BOT Badge</label>
