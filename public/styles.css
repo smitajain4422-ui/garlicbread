@@ -31,13 +31,17 @@ body.light-site {
     --chat-divider: rgba(255, 255, 255, 0.1);
 }
 
+/* UPDATED FOR PERFECT LIGHT THEME */
 .mockup-wrapper.light-chat-text {
-    --chat-text: #111827;
-    --chat-timestamp: #374151;
-    --chat-icon: #374151;
-    --chat-divider: rgba(0, 0, 0, 0.15);
-    --chat-input-placeholder: #4b5563;
-    --chat-input-bg: #ebedef; 
+    --chat-bg: #ffffff;
+    --chat-text: #313338;
+    --chat-timestamp: #5c5e66;
+    --chat-icon: #4e5058;
+    --chat-divider: rgba(0, 0, 0, 0.08);
+    --chat-input-placeholder: #5c5e66;
+    --chat-input-bg: #ebedef;
+    --chat-mention-bg: rgba(88, 101, 242, 0.15);
+    --chat-mention-text: #5865F2;
 }
 
 /* --- CORE STYLES --- */
@@ -182,4 +186,4 @@ body.light-site .animated-bg { opacity: 0; }
 .gif-btn { font-size: 13px; font-weight: 800; border: 2px solid currentColor; border-radius: 4px; padding: 0 3px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 .watermark { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--site-text-muted); text-align: center; padding: 8px 0; opacity: 0.5; }
-  
+    
