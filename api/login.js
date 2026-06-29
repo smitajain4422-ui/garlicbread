@@ -1,17 +1,39 @@
-export default function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: "Method not allowed" });
-    }
+// api/login.js
+export default async function handler(req, res) {
+    if (req.method !== 'POST') return res.status(405).json({ error: "Method not allowed" });
+    const { key, deviceId } = req.body;
+    const ADMIN_PASS = process.env.ADMIN_PASSWORD;
 
-    const { key } = req.body;
+    if (key === ADMIN_PASS) return res.status(200).json({ success: true, role: "admin" });
+
+    const KV_URL = process.env.KV_REST_API_URL;
+    const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+
+    const resp = await fetch(`${KV_URL}/get/nosify_data`, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
+    const data = await resp.json();
+    let db = data.result ? JSON.parse(data.result) : { keys: [], bans: [], logs: [] };
+
+    if (db.bans.includes(deviceId)) return res.status(403).json({ success: false, error: "Device is banned." });
+
+    let keyObj = db.keys.find(k => k.key === key);
+    if (!keyObj) return res.status(401).json({ success: false, error: "Invalid key." });
+
+    if (keyObj.claimedBy && keyObj.claimedBy !== deviceId) return res.status(403).json({ success: false, error: "This key is locked to another device." });
+    if (keyObj.expires && new Date().getTime() > keyObj.expires) return res.status(403).json({ success: false, error: "Key expired." });
+    if (keyObj.left !== 'perm' && keyObj.left <= 0) return res.status(403).json({ success: false, error: "No uses left on this key." });
+
+    // Lock to device if it's their first time using it
+    if (!keyObj.claimedBy && keyObj.key !== 'FREE') keyObj.claimedBy = deviceId;
     
-    // Set this string in Vercel's Environment Variables panel
-    const ADMIN_PASS = process.env.ADMIN_PASSWORD; 
+    // Add to logs
+    db.logs.unshift({ time: new Date().toLocaleString(), key: key, device: deviceId });
+    if (db.logs.length > 50) db.logs.pop();
 
-    if (key === ADMIN_PASS) {
-        return res.status(200).json({ success: true, role: "admin" });
-    }
+    await fetch(`${KV_URL}/set/nosify_data`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+        body: JSON.stringify(db)
+    });
 
-    return res.status(401).json({ success: false, error: "Invalid admin key" });
+    return res.status(200).json({ success: true, role: "user", left: keyObj.left, max: keyObj.max });
 }
-
