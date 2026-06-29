@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -200,7 +200,7 @@
                                     <div class="action-icons">
                                         <svg viewBox="0 0 24 24"><path d="M21 8h-3.24a4.5 4.5 0 0 0-6.76-4.22A4.5 4.5 0 0 0 4.24 8H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1Zm-9-1.5a1.5 1.5 0 1 1 1.5 1.5H12V6.5Zm-4.5 1.5a1.5 1.5 0 1 1 1.5-1.5V8H7.5Zm-4.5 6H10v8H4a1 1 0 0 1-1-1v-7Zm10 8v-8h7v7a1 1 0 0 1-1 1h-6Z"></path></svg>
                                         <div class="gif-btn">GIF</div>
-                                        <svg viewBox="0 0 24 24"><path d="M20 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2ZM8.5 13a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM12 17c-2.33 0-4.33-1.33-5.33-3.33h10.66C16.33 15.67 14.33 17 12 17Z"></path></svg>
+                                        <svg viewBox="0 0 24 24"><path d="M20 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2-2v16a2 2 0 0 1-2 2ZM8.5 13a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM12 17c-2.33 0-4.33-1.33-5.33-3.33h10.66C16.33 15.67 14.33 17 12 17Z"></path></svg>
                                         <svg viewBox="0 0 24 24"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm-3.5-13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm7 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM12 17.5c-2.67 0-5-1.83-6-4.5h12c-1 2.67-3.33 4.5-6 4.5Z"></path></svg>
                                     </div>
                                 </div>
@@ -224,7 +224,7 @@
                                 <span class="text-sm font-bold text-[#5865F2]">User 1</span>
                                 <button onclick="randomizeUser(1)" class="text-[11px] text-[var(--site-text-muted)] hover:text-[var(--site-text)]">🎲 Random</button>
                             </div>
-                            <input type="text" id="u1-name" class="input-box text-sm" value="Nosify">
+                            <input type="text" id="u1-name" class="input-box text-sm" value="Spencer">
                             <input type="text" id="u1-pfp" class="input-box text-sm" value="https://cdn.discordapp.com/avatars/1501622757593714911/be3f8e45edb1d086e5503dd5c46814aa.webp?size=2048">
                             <div class="flex gap-4 pt-1 items-center">
                                 <label class="text-xs flex items-center gap-2"><input type="checkbox" id="u1-bot" class="rounded"> BOT Badge</label>
@@ -289,4 +289,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
